@@ -10,6 +10,7 @@ import Foundation
 import Sodium
 import Network
 import Dispatch
+import SwiftyJSON
 
 extension String {
     func decodeBase64() -> Bytes? {
@@ -18,8 +19,217 @@ extension String {
     }
 }
 
+func incrementNonce(_ nonce: inout Bytes) -> () {
+    var i = nonce.count - 1
+    while i >= 0 && nonce[i] == 0xff {
+        nonce[i] = 0
+        i -= 1
+    }
+    if i >= 0 {
+        nonce[i] += 1
+    }
+}
+
+class BoxStream {
+    let connection: NWConnection
+    let secretBox: SecretBox
+    let key: Bytes
+    var nonce: Bytes
+    
+    init(connection: NWConnection, secretBox: SecretBox, key: Bytes, nonce: Bytes) {
+        self.connection = connection
+        self.secretBox = secretBox
+        self.key = key
+        self.nonce = nonce
+    }
+    
+    func send(_ msg: Bytes, _ completion: @escaping ((NWError?) -> ())) {
+        let encrypted_body = secretBox.seal(message: msg, secretKey: key, nonce: nonce)!
+        incrementNonce(&nonce)
+        let size_be = [UInt8(msg.count >> 8), UInt8(msg.count & 0xff)]
+        let header = secretBox.seal(message: size_be + encrypted_body.mac, secretKey: key, nonce: nonce)!
+        incrementNonce(&nonce)
+        let payload = header.mac + header.cipherText + encrypted_body.cipherText
+        connection.send(content: Data(payload), completion: .contentProcessed(completion))
+    }
+}
+
+class UnboxStream {
+    let connection: NWConnection
+    let secretBox: SecretBox
+    let key: Bytes
+    var nonce: Bytes
+    
+    init(connection: NWConnection, secretBox: SecretBox, key: Bytes, nonce: Bytes) {
+        self.connection = connection
+        self.secretBox = secretBox
+        self.key = key
+        self.nonce = nonce
+    }
+    
+    func read(_ completion: @escaping ((Bytes?, NWError?) -> ())) {
+        connection.receive(minimumIncompleteLength: 34, maximumLength: 34, completion: {
+            (data, _, isComplete, error) in
+            if let error = error {
+                completion(nil, error)
+            } else {
+                if let data = data {
+                    assert(data.count == 34)
+                    print("data", data.base64EncodedString())
+                    let header = self.secretBox.open(
+                        authenticatedCipherText: Bytes(data),
+                        secretKey: self.key,
+                        nonce: self.nonce
+                    )!
+                    if header.count == 18 && header.allSatisfy({ $0 == 0 }) {
+                        completion(nil, nil)
+                    } else {
+                        incrementNonce(&self.nonce)
+                        let size = Int(header[0]) << 8 + Int(header[1])
+                        self.connection.receive(minimumIncompleteLength: size, maximumLength: size, completion: {
+                            (data2, _, isComplete2, error2) in
+                            if let error2 = error2 {
+                                completion(nil, error2)
+                            } else {
+                                let body = self.secretBox.open(
+                                    cipherText: Bytes(data2!),
+                                    secretKey: self.key,
+                                    nonce: self.nonce,
+                                    mac: Bytes(header.suffix(from: 2))
+                                )!
+                                incrementNonce(&self.nonce)
+                                completion(body, nil)
+                            }
+                        })
+                    }
+                } else {
+                    print("stream over", isComplete)
+                    completion(nil, nil)
+                }
+            }
+        })
+    }
+}
+
+enum IsStream { case IsStream; case IsNotStream }
+enum IsEnd { case IsEnd; case IsNotEnd }
+enum BodyType: UInt8 { case Binary = 0; case String; case JSON }
+
+struct Request {
+    enum Body {
+        case Binary(Bytes)
+        case String(String)
+        case JSON(JSON)
+    }
+    
+    let isStream: IsStream
+    let isEnd: IsEnd
+    let body: Body
+}
+
+enum Error {
+    case NetworkError(NWError)
+    case CryptoError(String)
+    case ProtocolError(String)
+}
+
+enum Either<E, A> {
+    case Left(E)
+    case Right(A)
+}
+
+class RPCInputStream {
+    let source: UnboxStream
+    
+    enum State {
+        case ReadingHeader(Bytes)
+        case ReadingBody(IsStream, IsEnd, Int32, BodyType, Bytes, UInt32)
+    }
+    
+    var state: State = .ReadingHeader(Bytes([]))
+    
+    init(source: UnboxStream) {
+        self.source = source
+    }
+    
+    func read(_ completion: @escaping (Either<Error, Request>) -> ()) {
+        source.read({ (data, error) in
+            if let error = error {
+                completion(.Left(.NetworkError(error)))
+            } else {
+                guard let data = data else {
+                    return completion(.Left(.ProtocolError("eof")))
+                }
+                
+                print("state",  self.state, "data", data)
+
+                switch self.state {
+                case .ReadingBody(
+                    let isStream, let isEnd, let requestNumber,
+                    let bodyType, let bytes, let bodyLength
+                ):
+                    let buffer = data + bytes
+                    print("buffer", bodyLength, buffer)
+                    if buffer.count >= bodyLength {
+                        self.state = .ReadingHeader(Bytes(buffer.suffix(from: Int(bodyLength))))
+                        
+                        let bodyBytes = Bytes(buffer.prefix(Int(bodyLength)))
+                        print("bodybytes", bodyBytes)
+                        var body: Request.Body
+                        switch bodyType {
+                        case .Binary: body = .Binary(bodyBytes)
+                        case .String: body = .String(String(bytes: bodyBytes, encoding: .utf8)!)
+                        case .JSON: body = .JSON(JSON(Data(bodyBytes)))
+                        }
+                        
+                        return completion(.Right(Request(
+                            isStream: isStream, isEnd: isEnd, body: body
+                        )))
+                    } else {
+                        self.state = .ReadingBody(isStream, isEnd, requestNumber, bodyType, buffer, bodyLength)
+                    }
+                    
+                case .ReadingHeader(let bytes):
+                    func bigEndian4(_ xs: Array<UInt8>, _ i: Int) -> UInt32 {
+                        var x: UInt32 = 0
+                        for j in 0..<4 {
+                            x += UInt32(xs[i + j]) << (8 * UInt32(3 - j))
+                        }
+                        return x
+                    }
+                    
+                    let chunk = bytes + data
+                    if chunk.count >= 9 {
+                        let flags = chunk[0]
+                        let bodyLength = bigEndian4(chunk, 1)
+                        let requestNumber = Int32(bigEndian4(chunk, 5))
+                        let suffix = Array(chunk.suffix(from: 9))
+                        
+                        self.state = .ReadingBody(
+                            flags & 8 > 0 ? .IsStream : .IsNotStream,
+                            flags & 4 > 0 ? .IsEnd : .IsNotEnd,
+                            requestNumber,
+                            BodyType(rawValue: flags & 3)!,
+                            suffix,
+                            bodyLength
+                        )
+                    } else {
+                        self.state = .ReadingHeader(chunk)
+                    }
+                }
+                
+                self.read(completion)
+            }
+        })
+    }
+}
+
 public func foo() {
     let sodium = Sodium()
+    
+    func tag(_ message: Bytes, _ secretKey: Bytes) -> Bytes? {
+        return sodium.auth.tag(message: message, secretKey: secretKey)
+    }
     
     let A = sodium.sign.keyPair()!
     let a = sodium.box.keyPair()!
@@ -32,9 +242,12 @@ public func foo() {
         "uMiN0TRVMGVNTQUb6KCbiOi/8UQYcyojiA83rCghxGo=".decodeBase64()!
     let N =
         "1KHLiKZvAvjbY1ziZEHMXawbCEIM6qwjCDm3VYRan/s=".decodeBase64()!
+    
+    let client_hmac = tag(a_pk, N)!.prefix(upTo: 32)
+    
     let connection = NWConnection(
         host: "ssb.learningsocieties.org", port: 8008, using: .tcp)
-
+    
     connection.stateUpdateHandler = { (newState) in
         switch (newState) {
         case .ready:
@@ -72,7 +285,7 @@ public func foo() {
                     let hmac = Bytes(content!.prefix(upTo: 32))
                     let b_pk = Bytes(content!.suffix(from: 32))
                     if sodium.auth.verify(message: b_pk, secretKey: N, tag: hmac) {
-                        step3(b_pk: b_pk)
+                        step3(b_pk: b_pk, server_hmac: hmac)
                     } else {
                         print("authentication error")
                     }
@@ -80,11 +293,11 @@ public func foo() {
         })
     }
     
-    func step3(b_pk: Bytes) {
+    func step3(b_pk: Bytes, server_hmac: Bytes) {
         let ab = scalarmult(a_sk, b_pk)!
         let aB = scalarmult(a_sk, curvify_pk(B_pk)!)!
         
-        let sig_A = sign(sha256(N + B_pk + ab), A_sk)!
+        let sig_A = sign(N + B_pk + sha256(ab), A_sk)!
         
         let message = seal(
             sig_A + A_pk,
@@ -96,12 +309,12 @@ public func foo() {
             if let error = error {
                 print(error)
             } else {
-                step4(sig_A: sig_A, b_pk: b_pk, ab: ab, aB: aB)
+                step4(sig_A: sig_A, b_pk: b_pk, ab: ab, aB: aB, server_hmac: server_hmac)
             }
         })
     }
     
-    func step4(sig_A: Bytes, b_pk: Bytes, ab: Bytes, aB: Bytes) {
+    func step4(sig_A: Bytes, b_pk: Bytes, ab: Bytes, aB: Bytes, server_hmac: Bytes) {
         readPacket(80, {
             (content, isComplete, error) in
             if let error = error {
@@ -115,6 +328,34 @@ public func foo() {
                 
                 if verify(N + sig_A + A_pk + ab.sha256, key: B_pk, sig: sig_B) {
                     print("verified server accept")
+                    let boxStream = BoxStream(
+                        connection: connection,
+                        secretBox: sodium.secretBox,
+                        key: sha256(sha256(sha256(N + ab + aB + Ab)) + B_pk),
+                        nonce: Bytes(server_hmac.prefix(upTo: 24))
+                    )
+                    let unboxStream = UnboxStream(
+                        connection: connection,
+                        secretBox: sodium.secretBox,
+                        key: sha256(sha256(sha256(N + ab + aB + Ab)) + A_pk),
+                        nonce: Bytes(client_hmac.prefix(upTo: 24))
+                    )
+                    
+                    print(boxStream, unboxStream)
+                    
+                    let rpcInput = RPCInputStream(source: unboxStream)
+                    func loop() {
+                        rpcInput.read({
+                            switch $0 {
+                            case .Left(let e): print(e)
+                            case .Right(let rpc):
+                                print(rpc.body)
+                                loop()
+                            }
+                        })
+                    }
+                    
+                    loop()
                 } else {
                     print("failed to verify server accept")
                 }
@@ -129,7 +370,7 @@ public func foo() {
     func send(_ bytes: Bytes, _ completion: @escaping (NWError?) -> ()) {
         connection.send(content: Data(bytes), completion: .contentProcessed {
             (error) in completion(error)
-            })
+        })
     }
     
     func readPacket(_ count: Int, _ completion: @escaping (Data?, Bool, NWError?) -> ()) {
@@ -141,10 +382,6 @@ public func foo() {
                 completion(content, complete, error)
             }
         )
-    }
-    
-    func tag(_ message: Bytes, _ secretKey: Bytes) -> Bytes? {
-        return sodium.auth.tag(message: message, secretKey: secretKey)
     }
     
     func scalarmult(_ n: Bytes, _ p: Bytes) -> Bytes? {
