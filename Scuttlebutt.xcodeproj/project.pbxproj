@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5B26466D2154F2D40088F488 /* Handshake.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B26466C2154F2D40088F488 /* Handshake.swift */; };
 		5BA482DE2154E747002B3FC8 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA482DD2154E747002B3FC8 /* AppDelegate.swift */; };
 		5BA482E02154E747002B3FC8 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA482DF2154E747002B3FC8 /* ViewController.swift */; };
 		5BA482E32154E747002B3FC8 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5BA482E12154E747002B3FC8 /* Main.storyboard */; };
@@ -14,6 +15,9 @@
 		5BA482E82154E74B002B3FC8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5BA482E62154E74B002B3FC8 /* LaunchScreen.storyboard */; };
 		5BA482F32154E74B002B3FC8 /* ScuttlebuttTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA482F22154E74B002B3FC8 /* ScuttlebuttTests.swift */; };
 		5BA482FE2154E74B002B3FC8 /* ScuttlebuttUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA482FD2154E74B002B3FC8 /* ScuttlebuttUITests.swift */; };
+		5BA4831D2154EC73002B3FC8 /* Sodium.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BA483142154EC2B002B3FC8 /* Sodium.framework */; };
+		5BA4831E2154EC73002B3FC8 /* Sodium.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5BA483142154EC2B002B3FC8 /* Sodium.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		5BA483242154EF87002B3FC8 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5BA483232154EF87002B3FC8 /* Network.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,9 +35,66 @@
 			remoteGlobalIDString = 5BA482D92154E747002B3FC8;
 			remoteInfo = Scuttlebutt;
 		};
+		5BA483132154EC2B002B3FC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5BA4830B2154EC2A002B3FC8 /* Sodium.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 09A943C71A4EB5F500C8A04F;
+			remoteInfo = Sodium_iOS;
+		};
+		5BA483152154EC2B002B3FC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5BA4830B2154EC2A002B3FC8 /* Sodium.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 09A943D21A4EB5F500C8A04F;
+			remoteInfo = SodiumTests;
+		};
+		5BA483172154EC2B002B3FC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5BA4830B2154EC2A002B3FC8 /* Sodium.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 90C75E941AE3571900F1E749;
+			remoteInfo = Sodium_OSX;
+		};
+		5BA483192154EC2B002B3FC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5BA4830B2154EC2A002B3FC8 /* Sodium.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 901644B61AE36EA700163E3E;
+			remoteInfo = "Example iOS";
+		};
+		5BA4831B2154EC2B002B3FC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5BA4830B2154EC2A002B3FC8 /* Sodium.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 901644DC1AE36F2D00163E3E;
+			remoteInfo = "Example OSX";
+		};
+		5BA4831F2154EC73002B3FC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5BA4830B2154EC2A002B3FC8 /* Sodium.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 09A943C61A4EB5F500C8A04F;
+			remoteInfo = Sodium_iOS;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		5BA483212154EC73002B3FC8 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				5BA4831E2154EC73002B3FC8 /* Sodium.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		5B26466C2154F2D40088F488 /* Handshake.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Handshake.swift; sourceTree = "<group>"; };
 		5BA482DA2154E747002B3FC8 /* Scuttlebutt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Scuttlebutt.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5BA482DD2154E747002B3FC8 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		5BA482DF2154E747002B3FC8 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -47,6 +108,8 @@
 		5BA482F92154E74B002B3FC8 /* ScuttlebuttUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ScuttlebuttUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5BA482FD2154E74B002B3FC8 /* ScuttlebuttUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScuttlebuttUITests.swift; sourceTree = "<group>"; };
 		5BA482FF2154E74B002B3FC8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5BA4830B2154EC2A002B3FC8 /* Sodium.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Sodium.xcodeproj; path = "swift-sodium/Sodium.xcodeproj"; sourceTree = "<group>"; };
+		5BA483232154EF87002B3FC8 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,6 +117,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5BA483242154EF87002B3FC8 /* Network.framework in Frameworks */,
+				5BA4831D2154EC73002B3FC8 /* Sodium.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,10 +142,12 @@
 		5BA482D12154E747002B3FC8 = {
 			isa = PBXGroup;
 			children = (
+				5BA4830B2154EC2A002B3FC8 /* Sodium.xcodeproj */,
 				5BA482DC2154E747002B3FC8 /* Scuttlebutt */,
 				5BA482F12154E74B002B3FC8 /* ScuttlebuttTests */,
 				5BA482FC2154E74B002B3FC8 /* ScuttlebuttUITests */,
 				5BA482DB2154E747002B3FC8 /* Products */,
+				5BA483222154EF87002B3FC8 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -103,6 +170,7 @@
 				5BA482E42154E74B002B3FC8 /* Assets.xcassets */,
 				5BA482E62154E74B002B3FC8 /* LaunchScreen.storyboard */,
 				5BA482E92154E74B002B3FC8 /* Info.plist */,
+				5B26466C2154F2D40088F488 /* Handshake.swift */,
 			);
 			path = Scuttlebutt;
 			sourceTree = "<group>";
@@ -125,6 +193,26 @@
 			path = ScuttlebuttUITests;
 			sourceTree = "<group>";
 		};
+		5BA4830C2154EC2A002B3FC8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5BA483142154EC2B002B3FC8 /* Sodium.framework */,
+				5BA483162154EC2B002B3FC8 /* SodiumTests.xctest */,
+				5BA483182154EC2B002B3FC8 /* Sodium.framework */,
+				5BA4831A2154EC2B002B3FC8 /* Example iOS.app */,
+				5BA4831C2154EC2B002B3FC8 /* Example OSX.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5BA483222154EF87002B3FC8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5BA483232154EF87002B3FC8 /* Network.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -135,10 +223,12 @@
 				5BA482D62154E747002B3FC8 /* Sources */,
 				5BA482D72154E747002B3FC8 /* Frameworks */,
 				5BA482D82154E747002B3FC8 /* Resources */,
+				5BA483212154EC73002B3FC8 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				5BA483202154EC73002B3FC8 /* PBXTargetDependency */,
 			);
 			name = Scuttlebutt;
 			productName = Scuttlebutt;
@@ -215,6 +305,12 @@
 			mainGroup = 5BA482D12154E747002B3FC8;
 			productRefGroup = 5BA482DB2154E747002B3FC8 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 5BA4830C2154EC2A002B3FC8 /* Products */;
+					ProjectRef = 5BA4830B2154EC2A002B3FC8 /* Sodium.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				5BA482D92154E747002B3FC8 /* Scuttlebutt */,
@@ -223,6 +319,44 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		5BA483142154EC2B002B3FC8 /* Sodium.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = Sodium.framework;
+			remoteRef = 5BA483132154EC2B002B3FC8 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		5BA483162154EC2B002B3FC8 /* SodiumTests.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = SodiumTests.xctest;
+			remoteRef = 5BA483152154EC2B002B3FC8 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		5BA483182154EC2B002B3FC8 /* Sodium.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = Sodium.framework;
+			remoteRef = 5BA483172154EC2B002B3FC8 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		5BA4831A2154EC2B002B3FC8 /* Example iOS.app */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.application;
+			path = "Example iOS.app";
+			remoteRef = 5BA483192154EC2B002B3FC8 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		5BA4831C2154EC2B002B3FC8 /* Example OSX.app */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.application;
+			path = "Example OSX.app";
+			remoteRef = 5BA4831B2154EC2B002B3FC8 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		5BA482D82154E747002B3FC8 /* Resources */ = {
@@ -258,6 +392,7 @@
 			files = (
 				5BA482E02154E747002B3FC8 /* ViewController.swift in Sources */,
 				5BA482DE2154E747002B3FC8 /* AppDelegate.swift in Sources */,
+				5B26466D2154F2D40088F488 /* Handshake.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -289,6 +424,11 @@
 			isa = PBXTargetDependency;
 			target = 5BA482D92154E747002B3FC8 /* Scuttlebutt */;
 			targetProxy = 5BA482FA2154E74B002B3FC8 /* PBXContainerItemProxy */;
+		};
+		5BA483202154EC73002B3FC8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Sodium_iOS;
+			targetProxy = 5BA4831F2154EC73002B3FC8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -431,6 +571,7 @@
 		5BA483032154E74C002B3FC8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = AA8RNDKMB9;
@@ -449,6 +590,7 @@
 		5BA483042154E74C002B3FC8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = AA8RNDKMB9;
