@@ -45,6 +45,7 @@ class BoxStream {
     
     func send(_ msg: Bytes, _ completion: @escaping ((NWError?) -> ())) {
         let encrypted_body = secretBox.seal(message: msg, secretKey: key, nonce: nonce)!
+        assert(encrypted_body.mac.count == 16)
         incrementNonce(&nonce)
         let size_be = [UInt8(msg.count >> 8), UInt8(msg.count & 0xff)]
         let header = secretBox.seal(message: size_be + encrypted_body.mac, secretKey: key, nonce: nonce)!
@@ -124,6 +125,7 @@ struct Request {
     
     let isStream: IsStream
     let isEnd: IsEnd
+    let number: Int32
     let body: Body
 }
 
@@ -136,6 +138,64 @@ enum Error {
 enum Either<E, A> {
     case Left(E)
     case Right(A)
+}
+
+class RPCOutputStream {
+    let sink: BoxStream
+    
+    init(sink: BoxStream) {
+        self.sink = sink
+    }
+    
+    func send(_ req: Request, _ completion: @escaping ((Error?) -> ())) {
+        // XXX: this doesn't split large messages
+        let bytes = serialize(req)
+        print("sending", bytes)
+        sink.send(bytes, { (error) in
+            if let error = error {
+                completion(.NetworkError(error))
+            } else {
+                completion(nil)
+            }
+        })
+    }
+    
+    func serialize(_ req: Request) -> Bytes {
+        var flags = UInt8(0)
+        if req.isStream == .IsStream { flags += 8 }
+        if req.isEnd    == .IsEnd    { flags += 4 }
+        
+        func bigEndian4(_ x: UInt32) -> Bytes {
+            return [
+                UInt8((x >> 24) & 0xff),
+                UInt8((x >> 16) & 0xff),
+                UInt8((x >> 8)  & 0xff),
+                UInt8(x       & 0xff)
+            ]
+        }
+
+        func make(_ body: Bytes) -> Bytes {
+            return (
+                [flags]
+                    + bigEndian4(UInt32(body.count))
+                    + bigEndian4(UInt32(bitPattern: req.number))
+                    + body
+            )
+        }
+        
+        switch req.body {
+        case .Binary(let bytes):
+            return make(bytes)
+            
+        case .String(let string):
+            flags += 1
+            return make(Bytes(string.data(using: .utf8)!))
+            
+        case .JSON(let json):
+            flags += 2
+            return make(Bytes(try! json.rawData()))
+        }
+    }
 }
 
 class RPCInputStream {
@@ -183,7 +243,7 @@ class RPCInputStream {
                         }
                         
                         return completion(.Right(Request(
-                            isStream: isStream, isEnd: isEnd, body: body
+                            isStream: isStream, isEnd: isEnd, number: requestNumber, body: body
                         )))
                     } else {
                         self.state = .ReadingBody(isStream, isEnd, requestNumber, bodyType, buffer, bodyLength)
@@ -247,6 +307,8 @@ public func foo() {
     
     let connection = NWConnection(
         host: "ssb.learningsocieties.org", port: 8008, using: .tcp)
+    
+    print("waiting for connection")
     
     connection.stateUpdateHandler = { (newState) in
         switch (newState) {
@@ -344,12 +406,44 @@ public func foo() {
                     print(boxStream, unboxStream)
                     
                     let rpcInput = RPCInputStream(source: unboxStream)
+                    let rpcOutput = RPCOutputStream(sink: boxStream)
                     func loop() {
                         rpcInput.read({
                             switch $0 {
-                            case .Left(let e): print(e)
+                            case .Left(let e):
+                                print(e)
+                                return
                             case .Right(let rpc):
                                 print(rpc.body)
+                                switch rpc.body {
+                                case .JSON(let json):
+                                    let name = json["name"].arrayValue.map({$0.stringValue})
+                                    switch name {
+                                    case ["blobs", "createWants"]:
+                                        let response = Request(
+                                            isStream: .IsStream,
+                                            isEnd: .IsNotEnd,
+                                            number: -rpc.number,
+                                            body: .JSON([:]))
+                                        rpcOutput.send(response, {
+                                            print("finished RPC", $0.debugDescription)
+                                            let gimme = JSON([
+                                                "name": JSON(["createHistoryStream"]),
+                                                "type": JSON("source"),
+                                                "args": JSON([["id": "@oovEFjYs7F5m9RBPiK+gLtKDGL532sTStjiCLyJjqz0=.ed25519"]])
+                                            ])
+                                            print("json", String(bytes: try! gimme.rawData(), encoding: .utf8)!)
+                                            rpcOutput.send(
+                                                Request(isStream: .IsStream, isEnd: .IsNotEnd, number: 1, body: .JSON(gimme)),
+                                                {print("finished gimme", $0.debugDescription)}
+                                            )
+                                        })
+                                    default:
+                                        print("unknown RPC")
+                                    }
+                                default:
+                                    print("unknown RPC")
+                                }
                                 loop()
                             }
                         })
