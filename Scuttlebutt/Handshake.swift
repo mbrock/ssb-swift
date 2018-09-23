@@ -12,10 +12,11 @@ import Network
 import Dispatch
 import SwiftyJSON
 
-extension String {
-    func decodeBase64() -> Bytes? {
-        guard let data = Data(base64Encoded: self) else { return nil }
+func decodeBase64(_ string: String) -> Bytes? {
+    if let data = Data(base64Encoded: string) {
         return Bytes(data)
+    } else {
+        return nil
     }
 }
 
@@ -44,13 +45,14 @@ class BoxStream {
     }
     
     func send(_ msg: Bytes, _ completion: @escaping ((NWError?) -> ())) {
+        let nonce1 = nonce
+        incrementNonce(&nonce)
         let encrypted_body = secretBox.seal(message: msg, secretKey: key, nonce: nonce)!
         assert(encrypted_body.mac.count == 16)
-        incrementNonce(&nonce)
         let size_be = [UInt8(msg.count >> 8), UInt8(msg.count & 0xff)]
-        let header = secretBox.seal(message: size_be + encrypted_body.mac, secretKey: key, nonce: nonce)!
-        incrementNonce(&nonce)
+        let header = secretBox.seal(message: size_be + encrypted_body.mac, secretKey: key, nonce: nonce1)!
         let payload = header.mac + header.cipherText + encrypted_body.cipherText
+        incrementNonce(&nonce)
         connection.send(content: Data(payload), completion: .contentProcessed(completion))
     }
 }
@@ -262,7 +264,7 @@ class RPCInputStream {
                     if chunk.count >= 9 {
                         let flags = chunk[0]
                         let bodyLength = bigEndian4(chunk, 1)
-                        let requestNumber = Int32(bigEndian4(chunk, 5))
+                        let requestNumber = Int32(bitPattern: bigEndian4(chunk, 5))
                         let suffix = Array(chunk.suffix(from: 9))
                         
                         self.state = .ReadingBody(
@@ -284,7 +286,25 @@ class RPCInputStream {
     }
 }
 
+struct Params {
+    let pk: String
+    let address: NWEndpoint.Host
+    let port: NWEndpoint.Port
+}
+
 public func foo() {
+    let localParams = Params(
+        pk: "oovEFjYs7F5m9RBPiK+gLtKDGL532sTStjiCLyJjqz0=",
+        address: "172.20.10.2",
+        port: 8008)
+    
+    let pub1 = Params(
+        pk: "uMiN0TRVMGVNTQUb6KCbiOi/8UQYcyojiA83rCghxGo=",
+        address: "ssb.learningsocieties.org",
+        port: 8008)
+    
+    let params = localParams
+    
     let sodium = Sodium()
     
     func tag(_ message: Bytes, _ secretKey: Bytes) -> Bytes? {
@@ -298,15 +318,14 @@ public func foo() {
     let a_pk = a.publicKey
     let a_sk = a.secretKey
     
-    let B_pk =
-        "uMiN0TRVMGVNTQUb6KCbiOi/8UQYcyojiA83rCghxGo=".decodeBase64()!
-    let N =
-        "1KHLiKZvAvjbY1ziZEHMXawbCEIM6qwjCDm3VYRan/s=".decodeBase64()!
+    let B_pk = decodeBase64(params.pk)!
+    let N = decodeBase64(
+        "1KHLiKZvAvjbY1ziZEHMXawbCEIM6qwjCDm3VYRan/s=")!
     
     let client_hmac = tag(a_pk, N)!.prefix(upTo: 32)
     
     let connection = NWConnection(
-        host: "ssb.learningsocieties.org", port: 8008, using: .tcp)
+        host: params.address, port: params.port, using: .tcp)
     
     print("waiting for connection")
     
