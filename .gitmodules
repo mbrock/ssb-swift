@@ -1,6 +1,9 @@
 [submodule "swift-sodium"]
 	path = swift-sodium
-	url = https://github.com/jedisct1/swift-sodium.git
-[submodule "swifty-json"]
-	path = swifty-json
-	url = https://github.com/SwiftyJSON/SwiftyJSON.git
+	url = https://github.com/mbrock/ssb-swift-sodium.git
+[submodule "down"]
+	path = down
+	url = https://github.com/iwasrobbed/Down.git
+[submodule "JSON"]
+	path = JSON
+	url = https://github.com/mbrock/ssb-swift-json.git
